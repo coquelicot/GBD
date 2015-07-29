@@ -30,6 +30,7 @@ $ ./nbd.py
 After the server starts, you'll use nbd-client to connect to our server. Remember to replace *$WHATEVER_NAME_YOU_LIKE* into whatever name your like.
 
 ```
+$ sudo modprobe nbd
 $ sudo nbd-client $WHATEVER_NAME_YOU_LIKE localhost 10809 /dev/nbd0
 ```
 
@@ -43,9 +44,42 @@ $ sudo mount /dev/nbd0 /mnt
 $ ls /mnt
 ```
 
+If you want to disconnect the deivce from our server, you can use nbd-client again. However, remember to umount before disconnect, or something bad may happen.
+
+```
+$ sudo umount /dev/nbd0
+$ sudo nbd-client -d /dev/nbd0
+```
+
 Yeah, have a good time!
+
+### Encryption
+
+Since almost all your data will pass through the internet, it will be dangerous to store sensitive data on gbd. You could either store those files in an encrypted form or on your local disk. However, if your disk is too small to save all your files, it may be a good idea to encrypt to whole gbd transparently.
+
+Under linux, you may use dm-crypt to do full disk encryption. As gbd is acting just like a block device, it can be encrypted, too.
+
+```
+sudo cryptsetup luksFormat /dev/nbd0
+sudo cryptsetup luksOpen /dev/nbd0 gbd
+```
+
+After doing this, dm-crypt will map /dev/nbd0 to `/dev/mapper/gbd`. You may format/mount/umount it just like a normal block device except those data will be encrypted/decrypted after/before used.
+
+Note that you must close dm-crypt before disconnect (and after umount) from our nbd server. Encrypted data will be much more harder to reccover, hence you may lost your data permanently if you forget to close dm-crypt first.
+
+The whole closing process may looks like this:
+
+```
+sudo umount /dev/mapper/gbd
+sudo dmsetup remove gbd
+sudo nbd-client -d /dev/nbd0
+```
+
+Good luck!
 
 ## Bugs
 
 * May use trashed directory on google drive
 * May freeze your X window
+* Broken pipe while syncing data
