@@ -64,7 +64,7 @@ sudo cryptsetup luksFormat /dev/nbd0
 sudo cryptsetup luksOpen /dev/nbd0 gbd
 ```
 
-After doing this, dm-crypt will map /dev/nbd0 to `/dev/mapper/gbd`. You may format/mount/umount it just like a normal block device except those data will be encrypted/decrypted after/before used.
+After doing this, dm-crypt will map `/dev/nbd0` to `/dev/mapper/gbd`. You may format/mount/umount it just like a normal block device except those data will be encrypted/decrypted after/before used.
 
 Note that you must close dm-crypt before disconnect (and after umount) from our nbd server. Encrypted data will be much more harder to reccover, hence you may lost your data permanently if you forget to close dm-crypt first.
 
