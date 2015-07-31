@@ -107,15 +107,16 @@ class GBD:
         query_str = "title='{0}'".format(folder)
 
         results = self.drive.files().list(q=query_str).execute()
-        if len(results['items']) == 0:
+        items = filter(lambda x: not x['labels']['trashed'], results['items'])
+        if len(items) == 0:
             if not self.config.get('create', False):
                 raise RuntimeError("Can't locate `{0}'".format(folder))
             else:
                 return self.create_data_dir()
-        if len(results['items']) > 1:
-            raise AssertionError("{0} results found for `{1}', don't know which to use".format(len(results['items']), folder))
+        if len(items) > 1:
+            raise AssertionError("{0} results found for `{1}', don't know which to use".format(len(items), folder))
 
-        item = results['items'][0]
+        item = items[0]
         if item['mimeType'] != self.FOLDER_MIMETYPE:
             raise AssertionError("`{0}' is not a folder!! (mimeType={1})".format(folder, item['mimeType']))
         if not item['editable']:

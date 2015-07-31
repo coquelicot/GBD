@@ -47,28 +47,30 @@ class NBDService:
 
             if cmd == self.NBD_CMD_READ:
                 logger.debug("{0}: Read {1} {2}".format(seq, offset, length))
-                def gcb(handle):
+                def gcb(handle, seq):
                     def cb(err, data):
                         if err:
-                            logging.error("Read failed: {0}".format(e))
+                            logger.error("{0}: Read failed: {1}".format(seq, e))
                             self.send_reply(self.NBD_ERR_IO, handle)
                         else:
+                            logger.debug("{0}: Read end".format(seq))
                             self.send_reply(0, handle, data)
                     return cb
-                self.gbd.read(offset, length, callback=gcb(handle))
+                self.gbd.read(offset, length, callback=gcb(handle, seq))
 
             elif cmd == self.NBD_CMD_WRITE:
                 logger.debug("{0}: Write {1} {2}".format(seq, offset, length))
                 assert len(data) == length
-                def gcb(handle):
+                def gcb(handle, seq):
                     def cb(err):
                         if err:
-                            logging.error("Write failed: {0}".format(e))
+                            logger.error("{0}: Write failed: {1}".format(seq, e))
                             self.send_reply(self.NBD_ERR_IO, handle)
                         else:
+                            logger.debug("{0}: Write end".format(seq))
                             self.send_reply(0, handle)
                     return cb
-                self.gbd.write(offset, data, callback=gcb(handle))
+                self.gbd.write(offset, data, callback=gcb(handle, seq))
 
             elif cmd == self.NBD_CMD_FLUSH:
                 logger.debug("{0}: Flush".format(seq))

@@ -120,12 +120,12 @@ class CachedGBD:
                             with self.cache_lock:
                                 self.cache.seek(self.calc_offset(obj) + shift, os.SEEK_SET)
                                 data_list[idx - idxl] = self.cache.read(to_read)
-                            state[0] = state[0] - 1
-                            if state[0] == 0:
-                                if callback is None:
-                                    cv.notify()
-                                else:
-                                    callback(None, ''.join(data_list))
+                        state[0] = state[0] - 1
+                        if state[0] == 0:
+                            if callback is None:
+                                cv.notify()
+                            else:
+                                callback(None, ''.join(data_list))
                     return False
                 return cb
             self.pull(idx, read_data=(to_read == self.block_size), callback=gcb(idx, shift, to_read))
