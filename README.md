@@ -80,6 +80,5 @@ Good luck!
 
 ## Bugs
 
-* May use trashed directory on google drive
 * May freeze your X window
 * Broken pipe while syncing data
