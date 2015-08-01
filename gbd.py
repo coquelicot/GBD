@@ -4,11 +4,13 @@ import json
 import hashlib
 import logging
 import time
+import random
 
 from threading import Thread, Lock, Semaphore
 from config import Config, Metadata
 from util import TimedPriorityQueue
 from auth import AuthManager
+from apiclient import errors as apierrors
 from apiclient.discovery import build as build_service
 from apiclient.http import MediaInMemoryUpload
 
@@ -24,24 +26,36 @@ class GBDWorker(Thread):
     def run(self):
         while True:
             idx, data, cb = self.gbd.que.get()
+            err, ret = None, None
             try:
-                if data is None:
-                    ret = self.read_block(idx)
-                else:
-                    ret = self.write_block(idx, data)
-                err = None
+                ret = self.do_request(idx, data)
             except Exception as e:
                 err = e
-                ret = None
                 logger.error("I/O failed: {0}".format(e))
             finally:
                 try:
                     if cb:
                         cb(err, ret)
                 except Exception as e:
-                    logger.error("Callback failed: {0}".format(e))
+                    logger.error("Callback failed: {0}".format(repr(e)))
                 finally:
                     self.gbd.que.task_done()
+
+    def do_request(self, idx, data):
+        for rnd in xrange(5):
+            try:
+                if data is None:
+                    return self.read_block(idx)
+                else:
+                    return self.write_block(idx, data)
+            except apierrors.HttpError as e:
+                if e.resp.status == 403:
+                    reason = json.loads(e.content)['error']['errors'][0]['reason']
+                    if reason in ['rateLimitExceeded', 'userRateLimitExceeded']:
+                        logger.warning("Random backoff ({0})".format(reason))
+                        time.sleep((2 ** rnd) + random.randint(0, 999) / 1000)
+                        continue
+                raise
 
     def read_block(self, idx):
         blkid = self.gbd.block_id(idx)
