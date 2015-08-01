@@ -40,6 +40,8 @@ class GBDWorker(Thread):
                         cb(err, ret)
                 except Exception as e:
                     logger.error("Callback failed: {0}".format(e))
+                finally:
+                    self.gbd.que.task_done()
 
     def read_block(self, idx):
         blkid = self.gbd.block_id(idx)
@@ -197,7 +199,7 @@ class GBD:
         if cb:
             self.que.put((idx, None, cb), pri)
         else:
-            return self.do_sync(idx, None, pri)
+            return self.sync_io(idx, None, pri)
 
     def write_block(self, idx, data, cb=None, pri=TimedPriorityQueue.PRI_NORMAL):
         assert 0 <= idx < self.block_count
@@ -205,12 +207,11 @@ class GBD:
         if cb:
             self.que.put((idx, data, cb), pri)
         else:
-            return self.do_sync(idx, data, pri)
+            return self.sync_io(idx, data, pri)
 
     def sync(self):
         logger.info("Syncing...")
-        while not self.que.empty():
-            time.sleep(0.1)
+        self.que.join()
 
     def end(self, force):
         if not force:
@@ -260,7 +261,7 @@ class GBD:
             self.mapping[idx] = result['id']
             return result
 
-    def do_sync(self, idx, data, pri):
+    def sync_io(self, idx, data, pri):
 
         ret = []
         sem = Semaphore(0)
